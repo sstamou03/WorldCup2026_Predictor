@@ -37,9 +37,65 @@ df['result'] = df.apply(
 )
 #print(df['result'].value_counts())
 
-for t in sorted(df['tournament'].unique()):
-    print(t)
-    
+#Features 
 
+#1.Form Rolling Stat
+
+home_df = df[['date', 'home_team', 'away_team', 'home_score', 'away_score', 'result']].copy()
+home_df.columns = ['date', 'team', 'opponent', 'score', 'opp_score', 'result']
+
+away_df = df[['date', 'away_team', 'home_team', 'away_score', 'home_score', 'result']].copy()
+away_df.columns = ['date', 'team', 'opponent', 'score', 'opp_score', 'result']
+
+away_df["result"] = away_df["result"].map({"Win": "Loss", "Loss": "Win", "Draw": "Draw"})
+
+df1 = pd.concat([home_df, away_df]).sort_values(["team", "date"]).reset_index(drop=True)
+
+
+#Team's form 5 last games
+
+df1["points"] = df1["result"].map({"Win" : 3, "Draw" : 1, "Loss" : 0})
+grouped = df1.groupby("team")
+
+#points of five latst matches
+df1["form_5"] = grouped["points"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+
+#win rate
+df1["win_rate"] = grouped["result"].transform(lambda x: (x == "Win").cumsum().shift(1) / range(len(x)))
+
+# Helper functions to calculate streaks (consecutive matches) before each game
+def get_win_streak(series):
+    streak = []
+    current = 0
+    for val in series:
+        streak.append(current)
+        if val == "Win":
+            current += 1
+        else:
+            current = 0
+    return pd.Series(streak, index=series.index)
+
+def get_undefeated_streak(series):
+    streak = []
+    current = 0
+    for val in series:
+        streak.append(current)
+        if val in ["Win", "Draw"]:
+            current += 1
+        else:
+            current = 0
+    return pd.Series(streak, index=series.index)
+
+#avg goals scored in last 5 matches 
+df1["avg_goals_scored_5"] = grouped["score"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+
+#avg goals conceded in last 5 matches
+df1["avg_goals_conceded_5"] = grouped["opp_score"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+
+# streaks (consecutive wins and consecutive undefeated matches before the game)
+df1["win_streak"] = grouped["result"].transform(get_win_streak)
+df1["undefeated_streak"] = grouped["result"].transform(get_undefeated_streak)
+
+print(df1.head(10))
 
 
