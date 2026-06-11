@@ -107,6 +107,19 @@ df1["streak"] = grouped["result"].transform(get_streak_fixed)
 #|feature 4| H2H
 
             
-print(df1.head(10))
+#print(df1.head(10))
+
+path1 = kagglehub.dataset_download("lucasyukioimafuko/fifa-mens-world-ranking")
+if not os.path.exists("fifa_mens_rank.csv"):
+    shutil.copy(os.path.join(path1, "fifa_mens_rank.csv"), "fifa_mens_rank.csv")
+
+df_rank = pd.read_csv("fifa_mens_rank.csv")
+
+
+colsdrop = ['acronym', 'total.points', 'previous.points', 'diff.points']
+df_rank = df_rank.drop(columns=colsdrop, errors='ignore')
+
+print(df_rank.head(15))
+
 
 
