@@ -13,7 +13,7 @@ if not os.path.exists("data/results.csv"):
 
 df = pd.read_csv("data/results.csv")
 
-#EDA 
+#EDA
 #print(df.shape)
 #print(df.dtypes)
 #print(df.head())
@@ -61,41 +61,52 @@ grouped = df1.groupby("team")
 df1["form_5"] = grouped["points"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
 
 #win rate
-df1["win_rate"] = grouped["result"].transform(lambda x: (x == "Win").cumsum().shift(1) / range(len(x)))
+df1["win_rate"] = grouped["result"].transform(lambda x: (x=="Win").shift(1).rolling(20, min_periods=1).mean())
 
-# Helper functions to calculate streaks (consecutive matches) before each game
-def get_win_streak(series):
-    streak = []
-    current = 0
+#avg goals of last 5 matches 
+df1["avg_goals_5"] = grouped["score"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+
+#avg goals of last 5 matches pou tou kathisan
+df1["avg_opp_goals_5"] = grouped["opp_score"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+
+def get_streak_fixed(series):
+    streak_list = []
+    current_streak = 0
+    
     for val in series:
-        streak.append(current)
         if val == "Win":
-            current += 1
+            current_streak += 1
         else:
-            current = 0
-    return pd.Series(streak, index=series.index)
+            current_streak = 0
+        streak_list.append(current_streak)
+        
+    # to series for shifting and fillna for the first value
+    return pd.Series(streak_list, index=series.index).shift(1).fillna(0)
 
-def get_undefeated_streak(series):
-    streak = []
-    current = 0
-    for val in series:
-        streak.append(current)
-        if val in ["Win", "Draw"]:
-            current += 1
-        else:
-            current = 0
-    return pd.Series(streak, index=series.index)
 
-#avg goals scored in last 5 matches 
-df1["avg_goals_scored_5"] = grouped["score"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+#streak
+df1["streak"] = grouped["result"].transform(get_streak_fixed)
 
-#avg goals conceded in last 5 matches
-df1["avg_goals_conceded_5"] = grouped["opp_score"].transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+#TODO
+#double merge for the features for away and home team in the df
 
-# streaks (consecutive wins and consecutive undefeated matches before the game)
-df1["win_streak"] = grouped["result"].transform(get_win_streak)
-df1["undefeated_streak"] = grouped["result"].transform(get_undefeated_streak)
+#TODO
+#|feature 2| match context 
+# -> weight for tournament
+# -> neutral or not (1, 0)
 
+#TODO
+#|feature 3| Fifa rankings
+# -> load dataset
+# -> right casting in data
+# -> merge it with df
+# -> features from ranks (discusion)
+# -> drop matches before 1992
+
+#TODO
+#|feature 4| H2H
+
+            
 print(df1.head(10))
 
 
