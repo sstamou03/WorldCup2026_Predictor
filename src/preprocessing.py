@@ -118,7 +118,7 @@ df_rank = df_rank.groupby(['date', 'team'], as_index=False)['total.points'].mean
 
 df_rank = df_rank.rename(columns={'total.points': 'avg.points'})
 
-df_rank = df_rank.sort_values(by=['date', 'avg_points'], ascending=[False, False])
+df_rank = df_rank.sort_values(by=['date', 'avg.points'], ascending=[False, False])
 
 #print(df_rank.head(50))
 
