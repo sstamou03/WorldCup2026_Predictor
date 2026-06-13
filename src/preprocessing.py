@@ -1,17 +1,15 @@
+import sys
 import kagglehub
 import os
 import shutil
 import pandas as pd
 
-# Create data directory if it doesn't exist
-os.makedirs("data", exist_ok=True)
+sys.stdout.reconfigure(encoding='utf-8')
 
-# Download and copy to data folder to show in Explorer
-path = kagglehub.dataset_download("martj42/international-football-results-from-1872-to-2017")
-if not os.path.exists("data/results.csv"):
-    shutil.copy(os.path.join(path, "results.csv"), "data/results.csv")
+results_url = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
+shootouts_url = "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv"
 
-df = pd.read_csv("data/results.csv")
+df = pd.read_csv(results_url)
 
 #EDA
 #print(df.shape)
@@ -37,9 +35,33 @@ df['result'] = df.apply(
 )
 #print(df['result'].value_counts())
 
-#Features 
 
-#1.Form Rolling Stat
+# resolve Shootout
+df_shootouts = pd.read_csv(shootouts_url)
+df_shootouts['date'] = pd.to_datetime(df_shootouts['date'])
+df_shootouts = df_shootouts[['date', 'home_team', 'away_team', 'winner']]
+
+# concate df and df_shootouts
+df = pd.merge(df, df_shootouts, on=['date', 'home_team', 'away_team'], how='left')
+
+# update the result after penalties
+def resolve_penalties(row):
+    if row['result'] == 'Draw' and pd.notna(row['winner']):
+        if row['winner'] == row['home_team']:
+            return 'Win'
+        elif row['winner'] == row['away_team']:
+            return 'Loss'
+    return row['result']
+
+df['result'] = df.apply(resolve_penalties, axis=1)
+
+df = df.drop(columns=['winner'])
+
+
+
+#Features 
+#================================================================================================================
+#|feture 1| Form Rolling Stat
 
 home_df = df[['date', 'home_team', 'away_team', 'home_score', 'away_score', 'result']].copy()
 home_df.columns = ['date', 'team', 'opponent', 'score', 'opp_score', 'result']
@@ -89,13 +111,98 @@ df1["streak"] = grouped["result"].transform(get_streak_fixed)
 
 #print(df1.head(10))
 
-#TODO
 #double merge for the features for away and home team in the df
+features = ['date','team','form_5','win_rate', 'avg_goals_5', 'avg_opp_goals_5', 'streak']
+df_features1 = df1[features].copy()
 
-#TODO
+home_features = df_features1.copy()
+home_features.columns = ['date', 'home_team', 'home_form_5', 'home_win_rate', 'home_avg_goals_5', 'home_avg_opp_goals_5', 'home_streak']
+
+away_features = df_features1.copy()
+away_features.columns = ['date', 'away_team', 'away_form_5', 'away_win_rate', 'away_avg_goals_5', 'away_avg_opp_goals_5', 'away_streak']
+
+df = pd.merge(df, home_features, on=['date', 'home_team'], how='left')
+df = pd.merge(df, away_features, on=['date', 'away_team'], how='left')
+
+#print(df.head())
+#================================================================================================================
+
+
+#================================================================================================================
 #|feature 2| match context 
 # -> weight for tournament
 # -> neutral or not (1, 0)
+
+
+#delete tournaments which dont contain any of the teams.
+target_teams = [
+    # AFC
+    'Australia', 'Iran', 'Iraq', 'Japan', 'Jordan', 'Qatar', 'Saudi Arabia', 'South Korea', 'Uzbekistan',
+    # CAF
+    'Algeria', 'Cape Verde', 'DR Congo', 'Egypt', 'Ghana', 'Ivory Coast', 'Morocco', 'Senegal', 'South Africa', 'Tunisia',
+    # CONCACAF
+    'Canada', 'Curaçao', 'Haiti', 'Mexico', 'Panama', 'United States',
+    # CONMEBOL
+    'Argentina', 'Brazil', 'Colombia', 'Ecuador', 'Paraguay', 'Uruguay',
+    # OFC
+    'New Zealand',
+    # UEFA 
+    'Austria', 'Belgium', 'Bosnia and Herzegovina', 'Croatia', 'Czech Republic', 'England', 
+    'France', 'Germany', 'Netherlands', 'Norway', 'Portugal', 'Scotland', 'Spain', 
+    'Sweden', 'Switzerland', 'Turkey'
+]
+
+mask_target = df['home_team'].isin(target_teams) | df['away_team'].isin(target_teams)
+
+valid_tournaments = df[mask_target]['tournament'].unique()
+
+df = df[df['tournament'].isin(valid_tournaments)].copy().reset_index(drop=True)
+
+
+#weight for tournament
+
+# for t in df['tournament'].unique():
+#     print(t)
+
+def weight_tournament(tournament):
+
+    '''
+        weight by tournament
+
+        Scale 5: The Absolute (Only the final stage of the World Cup)
+        Scale 4: Final Stages of Continental Cups(e.g. Euro, Copa America, Asian Cup, etc.)
+        Scale 3: Official Qualifiers and Nations League/Confederations
+        Scale 1: The Friendlies (the lowest possible weight)
+        Scale 2: All other small tournaments that 'survived' (e.g. Kirin Cup)
+    '''
+
+    t = tournament.lower()
+
+    if 'world cup' in t and 'qualification' not in t and 'qualifier' not in t:
+        return 5
+        
+    elif any(cup in t for cup in ['euro', 'copa américa', 'african', 'asian cup', 'gold cup']):
+        if 'qualification' not in t and 'qualifier' not in t:   
+            return 4
+        else:
+            return 3
+            
+    elif 'qualification' in t or 'qualifier' in t or 'nations league' in t or 'confederations' in t:
+        return 3
+        
+    elif 'friendly' in t:
+        return 1
+    else:
+        return 2
+
+
+df['tournament_weight'] = df['tournament'].apply(weight_tournament)
+
+#make True to 1 or False to 0
+df['is_neutral'] = df['neutral'].astype(int)
+#================================================================================================================#================================================================================================================
+
+
 
 #TODO
 #|feature 3| Fifa rankings
