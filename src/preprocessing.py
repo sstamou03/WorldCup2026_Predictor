@@ -87,6 +87,8 @@ def get_streak_fixed(series):
 #streak
 df1["streak"] = grouped["result"].transform(get_streak_fixed)
 
+#print(df1.head(10))
+
 #TODO
 #double merge for the features for away and home team in the df
 
@@ -103,23 +105,25 @@ df1["streak"] = grouped["result"].transform(get_streak_fixed)
 # -> features from ranks (discusion)
 # -> drop matches before 1992
 
-#TODO
-#|feature 4| H2H
-
             
-#print(df1.head(10))
-
 path1 = kagglehub.dataset_download("lucasyukioimafuko/fifa-mens-world-ranking")
 if not os.path.exists("data/fifa_mens_rank.csv"):
     shutil.copy(os.path.join(path1, "fifa_mens_rank.csv"), "data/fifa_mens_rank.csv")
 
 df_rank = pd.read_csv("data/fifa_mens_rank.csv")
 
+df_rank = df_rank[['date', 'semester', 'team', 'total.points']].copy()
 
-colsdrop = ['acronym', 'total.points', 'previous.points', 'diff.points']
-df_rank = df_rank.drop(columns=colsdrop, errors='ignore')
+df_rank = df_rank.groupby(['date', 'team'], as_index=False)['total.points'].mean()
 
-print(df_rank.head(15))
+df_rank = df_rank.rename(columns={'total.points': 'avg.points'})
 
+df_rank = df_rank.sort_values(by=['date', 'avg_points'], ascending=[False, False])
+
+#print(df_rank.head(50))
+
+
+#TODO
+#|feature 4| H2H
 
 
