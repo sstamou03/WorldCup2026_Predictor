@@ -3,6 +3,7 @@ import kagglehub
 import os
 import shutil
 import pandas as pd
+import numpy as np
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -231,6 +232,65 @@ df_rank = df_rank.sort_values(by=['date', 'avg.points'], ascending=[False, False
 
 
 #TODO
+#================================================================================================================#================================================================================================================
 #|feature 4| H2H
+
+df["matchup"] = df.apply(lambda x: '-'.join(sorted([x['home_team'], x['away_team']])), axis=1)
+
+#our lists 
+h2h_matches, home_h2h_wins, away_h2h_wins = [], [], []
+history ={}
+
+for i, row in df.iterrows():
+    
+    matchup = row['matchup']
+    home = row["home_team"]
+    away = row["away_team"]
+    result = row["result"]
+
+    #init if new matchup
+    if matchup not in history:
+        history[matchup] = {home: 0, away: 0, 'Total': 0}
+
+    #read past of the matchup
+    stats = history[matchup]
+    h2h_matches.append(stats.get('Total', 0))
+    home_h2h_wins.append(stats.get(home, 0))
+    away_h2h_wins.append(stats.get(away, 0))
+
+    #update the history
+    if result == "Win":
+        history[matchup][home] = history[matchup].get(home, 0) + 1
+    elif result == "Loss":
+        history[matchup][away] = history[matchup].get(away, 0) + 1
+
+    history[matchup]['Total'] = history[matchup].get('Total', 0) + 1
+
+df['h2h_matches'] = h2h_matches
+df['home_h2h_wins'] = home_h2h_wins
+df['away_h2h_wins'] = away_h2h_wins
+
+#h2h win rate 
+df["home_h2h_win_rate"] = np.where(
+    df['h2h_matches'] > 0, 
+    df['home_h2h_wins'] / df['h2h_matches'],
+    0.5
+)
+
+df['away_h2h_win_rate'] = np.where(
+    df['h2h_matches'] > 0, 
+    df['away_h2h_wins'] / df['h2h_matches'],
+    0.5
+)
+
+df= df.drop(columns=['matchup'])  
+    
+    
+
+    
+    
+
+
+#================================================================================================================#================================================================================================================
 
 
