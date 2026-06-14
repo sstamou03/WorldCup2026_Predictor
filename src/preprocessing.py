@@ -285,12 +285,43 @@ df['away_h2h_win_rate'] = np.where(
 
 df= df.drop(columns=['matchup'])  
     
-    
-
-    
-    
-
-
 #================================================================================================================#================================================================================================================
+  
+df['match_year'] = df['date'].dt.year
 
+# 2HOME TEAM RANKINGS
+df_rank_home = df_rank.rename(columns={'match_year': 'match_year', 'team': 'home_team', 'avg.points': 'home_avg.points'})
+df = pd.merge(df, df_rank_home, on=['match_year', 'home_team'], how='left')
+
+# 3AWAY TEAM RANKINGS
+df_rank_away = df_rank.rename(columns={'match_year': 'match_year', 'team': 'away_team', 'avg.points': 'away_avg.points'})
+df = pd.merge(df, df_rank_away, on=['match_year', 'away_team'], how='left')
+
+#4 keep matches after 1993
+df = df[df['match_year'] >= 1993].reset_index(drop=True)
+
+#create differences
+
+df['points_diff'] = df['home_avg.points'] - df['away_avg.points']
+df['form_diff'] = df['home_form_5'] - df['away_form_5']
+df['streak_diff'] = df['home_streak'] - df['away_streak']
+
+df['target_result'] = df['result'].map({'Win': 2, 'Draw': 1, 'Loss': 0})
+
+
+# fill NaN with mean values
+df = df.sort_values('date').reset_index(drop=True)
+
+df['home_avg.points'] = df.groupby('home_team')['home_avg.points'].ffill()
+df['away_avg.points'] = df.groupby('away_team')['away_avg.points'].ffill()
+
+#extra fill
+global_mean = df['home_avg.points'].mean()
+df['home_avg.points'] = df['home_avg.points'].fillna(global_mean)
+df['away_avg.points'] = df['away_avg.points'].fillna(global_mean)
+
+df['points_diff'] = df['home_avg.points'] - df['away_avg.points']
+
+
+df.to_csv("data/world_cup_ready.csv", index=False)
 
