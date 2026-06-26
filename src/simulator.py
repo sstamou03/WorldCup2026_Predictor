@@ -20,12 +20,14 @@ teams_dict = latest_stats.set_index('home_team').to_dict('index')
 h2h_lookup = {}
 for _, row in df_data.iterrows():
     key = frozenset({row['home_team'], row['away_team']})
-    h2h_lookup[key] = {
-        'home': row['home_team'],
-        'away': row['away_team'],
-        'home_h2h_win_rate': row.get('home_h2h_win_rate', 0.5),
-        'away_h2h_win_rate': row.get('away_h2h_win_rate', 0.5),
-    }
+    # keep all h2h records, not just the last one
+    if key not in h2h_lookup:
+        h2h_lookup[key] = {
+            'home': row['home_team'],
+            'away': row['away_team'],
+            'home_h2h_win_rate': row.get('home_h2h_win_rate', 0.5),
+            'away_h2h_win_rate': row.get('away_h2h_win_rate', 0.5),
+        }
 
 
 groups = {
@@ -45,13 +47,16 @@ groups = {
 
 
 real_results = [
-    # GROUP A 
+    # GROUP A
     # Matchday 1
     ('Mexico', 'South Africa', 2, 0),
     ('South Korea', 'Czech Republic', 2, 1),
     # Matchday 2
     ('Czech Republic', 'South Africa', 1, 1),
     ('Mexico', 'South Korea', 1, 0),
+    # Matchday 3
+    ('Mexico', 'Czech Republic', 3, 0),
+    ('South Africa', 'South Korea', 1, 0),
 
     # GROUP B
     # Matchday 1
@@ -60,22 +65,31 @@ real_results = [
     # Matchday 2
     ('Canada', 'Qatar', 6, 0),
     ('Switzerland', 'Bosnia and Herzegovina', 4, 1),
+    # Matchday 3
+    ('Switzerland', 'Canada', 3, 1),
+    ('Bosnia and Herzegovina', 'Qatar', 3, 1),
 
-    # GROUP C   
+    # GROUP C
     # Matchday 1
     ('Brazil', 'Morocco', 1, 1),
     ('Scotland', 'Haiti', 1, 0),
     # Matchday 2
     ('Brazil', 'Haiti', 3, 0),
     ('Morocco', 'Scotland', 1, 0),
+    # Matchday 3
+    ('Scotland', 'Brazil', 0, 3),
+    ('Morocco', 'Haiti', 4, 2),
 
-    #  GROUP D 
+    # GROUP D
     # Matchday 1
     ('United States', 'Paraguay', 4, 1),
     ('Australia', 'Turkey', 2, 0),
     # Matchday 2
     ('United States', 'Australia', 2, 0),
     ('Paraguay', 'Turkey', 1, 0),
+    # Matchday 3
+    ('Turkey', 'United States', 3, 2),
+    ('Paraguay', 'Australia', 0, 0),
 
     # GROUP E
     # Matchday 1
@@ -84,56 +98,74 @@ real_results = [
     # Matchday 2
     ('Germany', 'Ivory Coast', 2, 1),
     ('Ecuador', 'Curaçao', 0, 0),
+    # Matchday 3
+    ('Curaçao', 'Ivory Coast', 0, 2),
+    ('Ecuador', 'Germany', 2, 1),
 
-    #  GROUP F 
+    # GROUP F
     # Matchday 1
     ('Netherlands', 'Japan', 2, 2),
     ('Sweden', 'Tunisia', 5, 1),
     # Matchday 2
     ('Netherlands', 'Sweden', 5, 1),
     ('Japan', 'Tunisia', 4, 0),
+    # Matchday 3
+    ('Japan', 'Sweden', 1, 1),
+    ('Netherlands', 'Tunisia', 3, 1),
 
-    #  GROUP G 
+    # GROUP G
     # Matchday 1
     ('Belgium', 'Egypt', 1, 1),
     ('Iran', 'New Zealand', 2, 2),
     # Matchday 2
     ('Egypt', 'New Zealand', 3, 1),
     ('Belgium', 'Iran', 0, 0),
+    # Matchday 3 → παίζονται 26/6, θα ενημερωθούν
 
-    #  GROUP H 
+    # GROUP H
     # Matchday 1
     ('Spain', 'Cape Verde', 0, 0),
     ('Saudi Arabia', 'Uruguay', 1, 1),
     # Matchday 2
     ('Spain', 'Saudi Arabia', 4, 0),
     ('Uruguay', 'Cape Verde', 2, 2),
+    # Matchday 3 → παίζονται 26/6, θα ενημερωθούν
 
-    #  GROUP I 
+    # GROUP I
     # Matchday 1
     ('France', 'Senegal', 3, 1),
     ('Iraq', 'Norway', 1, 4),
     # Matchday 2
     ('France', 'Iraq', 3, 0),
     ('Norway', 'Senegal', 3, 2),
+    # Matchday 3 → παίζονται 26/6, θα ενημερωθούν
 
-    #  GROUP J 
+    # GROUP J
     # Matchday 1
     ('Argentina', 'Algeria', 3, 0),
     ('Austria', 'Jordan', 3, 1),
     # Matchday 2
     ('Argentina', 'Austria', 2, 0),
     ('Jordan', 'Algeria', 1, 2),
+    # Matchday 3 → παίζονται 27/6, θα ενημερωθούν
 
-    # GROUP K 
+    # GROUP K
     # Matchday 1
     ('Portugal', 'DR Congo', 1, 1),
     ('Uzbekistan', 'Colombia', 1, 3),
+    # Matchday 2
+    ('Portugal', 'Uzbekistan', 5, 0),
+    ('Colombia', 'DR Congo', 1, 0),
+    # Matchday 3 → παίζονται 27/6, θα ενημερωθούν
 
-    #  GROUP L 
+    # GROUP L
     # Matchday 1
     ('England', 'Croatia', 4, 2),
     ('Ghana', 'Panama', 1, 0),
+    # Matchday 2
+    ('England', 'Ghana', 0, 0),
+    ('Panama', 'Croatia', 0, 1),
+    # Matchday 3 → παίζονται 27/6, θα ενημερωθούν
 ]
 
 # Build a lookup dict: frozenset({team1, team2}) -> list of (home, away, hg, ag)
@@ -156,31 +188,24 @@ def get_group_match_result(team1, team2):
 
         # if already played use that result and update pts
         home, away, hg, ag = played_matches[key][0]
-        
-        if hg > ag:
-            winner_pts, loser_pts = 3, 0
-            tag = f"REAL: {home} {hg}-{ag} {away}"
-        elif hg < ag:
-            winner_pts, loser_pts = 0, 3
-            tag = f"REAL: {home} {hg}-{ag} {away}"
-        else:
-            winner_pts, loser_pts = 1, 1
-            tag = f"REAL: {home} {hg}-{ag} {away}"
+
+        tag = f"REAL: {home} {hg}-{ag} {away}"
 
         # assign points to team1 and team2 correctly
-        if team1 == home:
-            t1_pts = winner_pts if hg > ag else (loser_pts if hg < ag else 1)
-            t2_pts = loser_pts if hg > ag else (winner_pts if hg < ag else 1)
-
+        if hg > ag:
+            home_pts, away_pts = 3, 0
+        elif hg < ag:
+            home_pts, away_pts = 0, 3
         else:
+            home_pts, away_pts = 1, 1
 
-            t1_pts = loser_pts if hg > ag else (winner_pts if hg < ag else 1)
-            t2_pts = winner_pts if hg > ag else (loser_pts if hg < ag else 1)
-
-        return t1_pts, t2_pts, tag
+        if team1 == home:
+            return home_pts, away_pts, tag
+        else:
+            return away_pts, home_pts, tag
 
     else:
-        # if not played use the model to predict 
+        # if not played use the model to predict
         return predict_group_match(team1, team2)
 
 
@@ -210,8 +235,15 @@ def predict_group_match(team1, team2):
     """Use the XGBoost model to predict a group stage match."""
 
     default_stats = {'home_avg.points': 1000, 'home_form_5': 1.5, 'home_streak': 0}
+
     stats1 = teams_dict.get(team1, default_stats)
     stats2 = teams_dict.get(team2, default_stats)
+
+    # warn if a team is missing from the dataset
+    if team1 not in teams_dict:
+        print(f"  [WARNING] '{team1}' not found in dataset, using default stats.")
+    if team2 not in teams_dict:
+        print(f"  [WARNING] '{team2}' not found in dataset, using default stats.")
 
     points_diff = stats1.get('home_avg.points', 1000) - stats2.get('home_avg.points', 1000)
     form_diff = stats1.get('home_form_5', 1.5) - stats2.get('home_form_5', 1.5)
@@ -223,7 +255,7 @@ def predict_group_match(team1, team2):
     match_features = np.array([[points_diff, form_diff, streak_diff, 5.0, 1.0, h2h_home, h2h_away]])
 
     probs = model.predict_proba(match_features)[0]
-    
+
     result = np.argmax(probs)
 
     win_pct = f"{probs[2]*100:.0f}%"
@@ -276,6 +308,7 @@ group_runners_up = {}
 thirds_stats = []
 
 for g_letter, group_teams in groups.items():
+    # track pts, gf, ga for each team
     standings = {team: {'pts': 0, 'gf': 0, 'ga': 0} for team in group_teams}
 
     header_text = f" GROUP {g_letter}: {' | '.join(group_teams)} "
@@ -289,31 +322,43 @@ for g_letter, group_teams in groups.items():
         for j in range(i + 1, len(group_teams)):
             t1, t2 = group_teams[i], group_teams[j]
             t1_pts, t2_pts, tag = get_group_match_result(t1, t2)
-            
+
             standings[t1]['pts'] += t1_pts
             standings[t2]['pts'] += t2_pts
-            
+
+            # track goals for goal difference tiebreaker
+            key = frozenset({t1, t2})
+            if key in played_matches:
+                home, away, hg, ag = played_matches[key][0]
+                if t1 == home:
+                    standings[t1]['gf'] += hg; standings[t1]['ga'] += ag
+                    standings[t2]['gf'] += ag; standings[t2]['ga'] += hg
+                else:
+                    standings[t1]['gf'] += ag; standings[t1]['ga'] += hg
+                    standings[t2]['gf'] += hg; standings[t2]['ga'] += ag
+
             match_str = f"{t1} vs {t2}"
             print(f"  * {match_str:<35} | {tag}")
 
-    # sort standings by points
+    # sort standings: first by pts, then by goal difference as tiebreaker
     sorted_standings = sorted(
         standings.items(),
-        key=lambda x: x[1]['pts'],
+        key=lambda x: (x[1]['pts'], x[1]['gf'] - x[1]['ga'], x[1]['gf']),
         reverse=True
     )
 
     print("\n  [Standings]")
-    print("  ┌" + "─"*32 + "┬" + "─"*7 + "┐")
-    print("  │ " + "Team".ljust(30) + " │ " + "Pts".ljust(5) + " │")
-    print("  ├" + "─"*32 + "┼" + "─"*7 + "┤")
-    
+    print("  ┌" + "─"*32 + "┬" + "─"*7 + "┬" + "─"*7 + "┐")
+    print("  │ " + "Team".ljust(30) + " │ " + "Pts".ljust(5) + " │ " + "GD".ljust(5) + " │")
+    print("  ├" + "─"*32 + "┼" + "─"*7 + "┼" + "─"*7 + "┤")
+
     for idx, (team, stats) in enumerate(sorted_standings, 1):
         team_display = f"{idx}. {team}"
-        print(f"  │ {team_display:<30} │ {stats['pts']:>4}  │")
-        
-    print("  └" + "─"*32 + "┴" + "─"*7 + "┘")
+        gd = stats['gf'] - stats['ga']
+        gd_str = f"+{gd}" if gd > 0 else str(gd)
+        print(f"  │ {team_display:<30} │ {stats['pts']:>4}  │ {gd_str:>4}  │")
 
+    print("  └" + "─"*32 + "┴" + "─"*7 + "┴" + "─"*7 + "┘")
 
     group_winners[g_letter] = sorted_standings[0][0]
     group_runners_up[g_letter] = sorted_standings[1][0]
@@ -334,9 +379,9 @@ print("  ├" + "─"*32 + "┼" + "─"*7 + "┼" + "─"*7 + "┼" + "─"*16 
 for idx, (team, pts, group) in enumerate(best_thirds_sorted, 1):
     status = "QUALIFIED" if idx <= 8 else "ELIMINATED"
     team_display = f"{idx}. {team}"
-    
+
     print(f"  │ {team_display:<30} │ {group:^5} │ {pts:^5} │ {status:^14} │")
-    
+
     if idx == 8:
         print("  ├" + "─"*32 + "┼" + "─"*7 + "┼" + "─"*7 + "┼" + "─"*16 + "┤")
 
@@ -351,6 +396,7 @@ def run_knockout_stage(teams_list, stage_name):
     print("  │" + stage_name.center(66) + "│")
     print("  └" + "─"*66 + "┘")
     winners = []
+    losers = []
     for i in range(0, len(teams_list), 2):
         t1, t2 = teams_list[i], teams_list[i+1]
         winner = predict_knockout_match(t1, t2)
@@ -358,7 +404,8 @@ def run_knockout_stage(teams_list, stage_name):
         match_str = f"{t1} vs {t2}"
         print(f"    {match_str:<45} | Winner: {winner}")
         winners.append(winner)
-    return winners
+        losers.append(loser)
+    return winners, losers
 
 
 print("\n╔" + "═"*70 + "╗")
@@ -398,15 +445,14 @@ for idx, (t1, t2) in enumerate(round_of_32_matches, 73):
     round_of_16_teams.append(winner)
 
 # Progress through the next stages
-round_of_16 = run_knockout_stage(round_of_16_teams, "ROUND OF 16")
-quarters = run_knockout_stage(round_of_16, "QUARTER-FINALS")
-semis = run_knockout_stage(quarters, "SEMI-FINALS")
+round_of_16, _ = run_knockout_stage(round_of_16_teams, "ROUND OF 16")
+quarters, _ = run_knockout_stage(round_of_16, "QUARTER-FINALS")
+semis, sf_losers = run_knockout_stage(quarters, "SEMI-FINALS")
 
 # ---------------------------------------------------------------------
 # 3rd Place Match
+# (losers are tracked directly from run_knockout_stage, no guesswork)
 # ---------------------------------------------------------------------
-# Find the losers of the semi-finals by checking who made it to quarters but not finals
-sf_losers = [q for q in quarters if q not in semis]
 third_place = None
 
 if len(sf_losers) == 2:
