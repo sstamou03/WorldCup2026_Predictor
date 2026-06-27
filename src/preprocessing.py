@@ -7,10 +7,13 @@ import numpy as np
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+os.makedirs("data", exist_ok=True)
 results_url = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 shootouts_url = "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv"
 
+print(f"Downloading latest results from: {results_url}")
 df = pd.read_csv(results_url)
+df.to_csv("data/results.csv", index=False)
 
 #EDA
 #print(df.shape)
@@ -38,7 +41,10 @@ df['result'] = df.apply(
 
 
 # resolve Shootout
+print(f"Downloading latest shootouts from: {shootouts_url}")
 df_shootouts = pd.read_csv(shootouts_url)
+df_shootouts.to_csv("data/shootouts.csv", index=False)
+
 df_shootouts['date'] = pd.to_datetime(df_shootouts['date'])
 df_shootouts = df_shootouts[['date', 'home_team', 'away_team', 'winner']]
 
