@@ -53,3 +53,14 @@ model_xgb.fit(X_train, y_train)
 # 7. Evaluate on Test Set
 y_pred = model_xgb.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
+
+print("\n======================================")
+print(f"Test Set Accuracy: {accuracy * 100:.2f}%")
+print("======================================")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred, target_names=['Loss (0)', 'Draw (1)', 'Win (2)']))
+
+# 8. Save model
+os.makedirs("models", exist_ok=True)
+joblib.dump(model_xgb, "models/football_model_xgb.pkl")
+print("\n✅ Model saved to models/football_model_xgb.pkl")

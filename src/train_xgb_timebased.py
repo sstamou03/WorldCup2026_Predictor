@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.utils.class_weight import compute_sample_weight
 import joblib
 import os
 import sys
@@ -60,7 +61,8 @@ print(f"CV Standard Deviation: {cv_scores.std() * 100:.2f}%")
 print("-" * 32)
 
 # 6. Final training
-model_xgb.fit(X_train, y_train)
+sample_weights = compute_sample_weight(class_weight='balanced', y=y_train)
+model_xgb.fit(X_train, y_train, sample_weight=sample_weights)
 
 # 7. Evaluate on Future Test Set
 y_pred = model_xgb.predict(X_test)
