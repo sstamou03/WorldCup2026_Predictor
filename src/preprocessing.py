@@ -238,7 +238,7 @@ df_rank = df_rank.rename(columns={'total.points': 'avg.points'})
 
 df_rank = df_rank.sort_values(by=['date', 'avg.points'], ascending=[False, False])
 
-
+#print(df_rank.head(50))
 
 
 #TODO
@@ -361,6 +361,3 @@ df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
 
 os.makedirs("data", exist_ok=True)
 df.to_csv("data/world_cup_ready.csv", index=False)
-
-#print(df.head(50))
-
