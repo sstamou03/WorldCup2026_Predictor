@@ -150,6 +150,16 @@ for home, away, hg, ag in real_results:
         played_matches[key] = []
     played_matches[key].append((home, away, hg, ag))
 
+real_knockout_results = [
+    # ('Team 1', 'Team 2', 'Winner'),
+    # e.g. ('Mexico', 'Canada', 'Mexico'),
+]
+
+played_knockout_matches = {}
+for t1, t2, winner in real_knockout_results:
+    played_knockout_matches[frozenset({t1, t2})] = winner
+
+
 
 def get_group_match_result(team1, team2):
     key = frozenset({team1, team2})
@@ -208,6 +218,10 @@ def predict_group_match(team1, team2):
 
 
 def predict_knockout_match(team1, team2):
+    key = frozenset({team1, team2})
+    if key in played_knockout_matches:
+        return played_knockout_matches[key]
+
     default_stats = {'home_avg.points': 1000, 'home_form_5': 1.5, 'home_streak': 0}
     stats1 = teams_dict.get(team1, default_stats)
     stats2 = teams_dict.get(team2, default_stats)
@@ -355,7 +369,8 @@ def run_knockout_stage(teams_list, stage_name):
         winner   = predict_knockout_match(t1, t2)
         loser    = t2 if winner == t1 else t1
         match_str = f"{t1} vs {t2}"
-        print(f"    {match_str:<45} | Winner: {winner}")
+        tag = "REAL" if frozenset({t1, t2}) in played_knockout_matches else "PREDICTED"
+        print(f"    {match_str:<45} | [{tag}] Winner: {winner}")
         winners.append(winner)
         losers.append(loser)
     return winners, losers
@@ -416,7 +431,8 @@ round_of_16_teams = []
 for idx, (t1, t2) in enumerate(round_of_32_matches, 73):
     winner    = predict_knockout_match(t1, t2)
     match_str = f"Match {idx}: {t1} vs {t2}"
-    print(f"    {match_str:<55} | Winner: {winner}")
+    tag = "REAL" if frozenset({t1, t2}) in played_knockout_matches else "PREDICTED"
+    print(f"    {match_str:<55} | [{tag}] Winner: {winner}")
     round_of_16_teams.append(winner)
 
 # =====================================================================
@@ -448,7 +464,8 @@ if len(sf_losers) == 2:
     print("  └" + "─"*66 + "┘")
     third_place = predict_knockout_match(sf_losers[0], sf_losers[1])
     match_str   = f"{sf_losers[0]} vs {sf_losers[1]}"
-    print(f"    {match_str:<45} | Winner: {third_place}")
+    tag = "REAL" if frozenset({sf_losers[0], sf_losers[1]}) in played_knockout_matches else "PREDICTED"
+    print(f"    {match_str:<45} | [{tag}] Winner: {third_place}")
 
 # =====================================================================
 # GRAND FINAL
@@ -459,8 +476,9 @@ print("╚" + "═"*70 + "╝")
 
 champion   = predict_knockout_match(semis[0], semis[1])
 runner_up  = semis[1] if champion == semis[0] else semis[0]
+final_tag  = "REAL" if frozenset({semis[0], semis[1]}) in played_knockout_matches else "PREDICTED"
 
-print(f"\n  Final Match: {semis[0]} vs {semis[1]}\n")
+print(f"\n  Final Match: {semis[0]} vs {semis[1]} [{final_tag}]\n")
 print("  ┌" + "─"*66 + "┐")
 print(f"  │ WINNER (CHAMPION): {champion:<45} │")
 print(f"  │ RUNNER-UP:         {runner_up:<45} │")
