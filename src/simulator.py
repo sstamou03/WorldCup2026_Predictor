@@ -152,7 +152,43 @@ for home, away, hg, ag in real_results:
 
 real_knockout_results = [
     # ('Team 1', 'Team 2', 'Winner'),
-    # e.g. ('Mexico', 'Canada', 'Mexico'),
+    # Real FIFA World Cup 2026 results (source: Wikipedia knockout bracket).
+    # As of 2026-07-14: Round of 32, Round of 16 and Quarter-finals complete.
+    # Semi-finals / 3rd place / Final not yet played -> left to the model.
+
+    # ROUND OF 32
+    ('South Africa', 'Canada', 'Canada'),
+    ('Germany', 'Paraguay', 'Paraguay'),                 # Paraguay won on penalties
+    ('Netherlands', 'Morocco', 'Morocco'),               # Morocco won on penalties
+    ('Brazil', 'Japan', 'Brazil'),
+    ('France', 'Sweden', 'France'),
+    ('Ivory Coast', 'Norway', 'Norway'),
+    ('Mexico', 'Ecuador', 'Mexico'),
+    ('England', 'DR Congo', 'England'),
+    ('United States', 'Bosnia and Herzegovina', 'United States'),
+    ('Belgium', 'Senegal', 'Belgium'),
+    ('Portugal', 'Croatia', 'Portugal'),
+    ('Spain', 'Austria', 'Spain'),
+    ('Switzerland', 'Algeria', 'Switzerland'),
+    ('Argentina', 'Cape Verde', 'Argentina'),
+    ('Colombia', 'Ghana', 'Colombia'),
+    ('Australia', 'Egypt', 'Egypt'),                     # Egypt won on penalties
+
+    # ROUND OF 16
+    ('Paraguay', 'France', 'France'),
+    ('Canada', 'Morocco', 'Morocco'),
+    ('Portugal', 'Spain', 'Spain'),
+    ('United States', 'Belgium', 'Belgium'),
+    ('Brazil', 'Norway', 'Norway'),
+    ('Mexico', 'England', 'England'),
+    ('Argentina', 'Egypt', 'Argentina'),
+    ('Switzerland', 'Colombia', 'Switzerland'),
+
+    # QUARTER-FINALS
+    ('France', 'Morocco', 'France'),
+    ('Spain', 'Belgium', 'Spain'),
+    ('Norway', 'England', 'England'),
+    ('Argentina', 'Switzerland', 'Argentina'),
 ]
 
 played_knockout_matches = {}
@@ -438,16 +474,24 @@ for idx, (t1, t2) in enumerate(round_of_32_matches, 73):
 # =====================================================================
 # ROUND OF 16  (pairs: W73-W75, W74-W77, W76-W78, W79-W80,
 #               W81-W82, W83-W84, W85-W87, W86-W88)
+#
+# The 8 RO16 matches are ordered so that plain adjacent pairing at every
+# later round reproduces the official FIFA 2026 bracket. The bracket has
+# two halves that must stay contiguous:
+#   Left  half  -> Semi-final 1 : RO16 (W73/75, W74/77) + (W83/84, W81/82)
+#   Right half  -> Semi-final 2 : RO16 (W76/78, W79/80) + (W86/88, W85/87)
 # =====================================================================
 ro16_ordered = [
+    # ── Left half (feeds Semi-final 1) ──
     round_of_16_teams[0],  round_of_16_teams[2],   # W73 vs W75
     round_of_16_teams[1],  round_of_16_teams[4],   # W74 vs W77
+    round_of_16_teams[10], round_of_16_teams[11],  # W83 vs W84
+    round_of_16_teams[8],  round_of_16_teams[9],   # W81 vs W82
+    # ── Right half (feeds Semi-final 2) ──
     round_of_16_teams[3],  round_of_16_teams[5],   # W76 vs W78
     round_of_16_teams[6],  round_of_16_teams[7],   # W79 vs W80
-    round_of_16_teams[8],  round_of_16_teams[9],   # W81 vs W82
-    round_of_16_teams[10], round_of_16_teams[11],  # W83 vs W84
-    round_of_16_teams[12], round_of_16_teams[14],  # W85 vs W87
     round_of_16_teams[13], round_of_16_teams[15],  # W86 vs W88
+    round_of_16_teams[12], round_of_16_teams[14],  # W85 vs W87
 ]
 
 round_of_16, _  = run_knockout_stage(ro16_ordered,       "ROUND OF 16")
